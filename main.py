@@ -1,11 +1,13 @@
-import socket
-import ipaddress
-import time
+from concurrent.futures import ThreadPoolExecutor # для многопоточного сканирования
+import socket # для работы с сетевыми сокетами
+import ipaddress # для проверки корректности IP-адреса
+import time # для измерения времени сканирования
+
 
 # документация продукта
 print("NetScout")
 print("Network Security Scanner")
-print("Version: 0.2")
+print("Version: 0.4")
 
 # получение IP-адреса для сканирования
 target = input("Введите IP-адрес: ")
@@ -32,13 +34,6 @@ try:
 except ValueError:
     print("Ошибка: Введены некорректные данные для диапазона портов.")
     exit()
-
-# счетчик и список открытых портов
-open_ports = 0 
-open_ports_list = []
-
-# запуск таймера для измерения времени сканирования
-start_time = time.time()
 
 # словарь служб
 services = {
@@ -77,9 +72,8 @@ services = {
     27017: "MongoDB"
 }
 
-# сканирование портов
-for port in range(port_start, port_end + 1):
-
+# функция для проверки порта
+def check_port(target, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(1)
 
@@ -87,10 +81,35 @@ for port in range(port_start, port_end + 1):
 
     if result == 0:
         service = services.get(port, "Неизвестная служба")
-        print(f"[+] Порт {port} открыт — {service}")
+        sock.close()
+        return port, service
+
+    sock.close()
+    return None
+
+# счетчик,список открытых портов и список задач для многопоточного сканирования
+open_ports = 0 
+open_ports_list = []
+futures = []
+
+# запуск таймера для измерения времени сканирования
+start_time = time.time()
+
+# сканирование портов
+with ThreadPoolExecutor(max_workers=10) as executor:
+
+    for port in range(port_start, port_end + 1):
+        future = executor.submit(check_port, target, port)
+        futures.append(future)
+
+for future in futures:
+    result = future.result()
+
+    if result is not None:
+        port, service = result
         open_ports += 1
         open_ports_list.append(port)
-    sock.close()
+        print(f"[+] Порт {port} открыт — {service}")
 
 # завершение таймера и расчет времени сканирования
 end_time = time.time()
