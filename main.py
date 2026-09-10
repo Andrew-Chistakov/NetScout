@@ -5,14 +5,19 @@ import time # для измерения времени сканирования
 
 
 # документация продукта
-print("NetScout")
-print("Network Security Scanner")
-print("Version: 0.4")
+print("╭────────────────────────────────────────╮")
+print("│ NETSCOUT                    v0.4.0     │")
+print("│ NETWORK RECONNAISSANCE TOOL            │")
+print("╰────────────────────────────────────────╯")
 
 # получение IP-адреса для сканирования
-target = input("Введите IP-адрес: ")
+print("├────────────────────────────────────────┤")
+print("│ TARGET                                 │")
+target = input("│  └─ ")
+print("│                                        │")
+print("├────────────────────────────────────────┤")
 
-# проверка корректности введенного IP-адреса
+# проверка корректности введенного IP-адресаt
 try:
     ipaddress.ip_address(target)
 except ValueError:
@@ -20,8 +25,11 @@ except ValueError:
     exit()
 
 # получение диапазона портов для сканирования
-port_start = input("Введите начальный порт: ")
-port_end = input("Введите конечный порт: ")
+print("│ SCAN CONFIGURATION                     │")
+print("│  ├─ TCP                                │")
+
+port_start = input("│  ├─ Start port: ")
+port_end = input("│  └─ End port:   ")
 
 # проверка корректности введенного диапазона портов
 try:
@@ -34,6 +42,9 @@ try:
 except ValueError:
     print("Ошибка: Введены некорректные данные для диапазона портов.")
     exit()
+
+# графическое оформление 
+print("├────────────────────────────────────────┤")
 
 # словарь служб
 services = {
@@ -74,16 +85,15 @@ services = {
 
 # функция для проверки порта
 def check_port(target, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(1)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1)
 
-    result = sock.connect_ex((target, port))
+        result = sock.connect_ex((target, port))
 
-    if result == 0:
-        service = services.get(port, "Неизвестная служба")
-        sock.close()
-        return port, service
-
+        if result == 0:
+            service = services.get(port, "Неизвестная служба")
+            sock.close()
+            return port, service
     sock.close()
     return None
 
@@ -102,6 +112,11 @@ with ThreadPoolExecutor(max_workers=10) as executor:
         future = executor.submit(check_port, target, port)
         futures.append(future)
 
+# внешний вид 
+print("│ FINDINGS                               │")
+print("│                                        │")
+
+# вывод результатов сканирования
 for future in futures:
     result = future.result()
 
@@ -109,14 +124,15 @@ for future in futures:
         port, service = result
         open_ports += 1
         open_ports_list.append(port)
-        print(f"[+] Порт {port} открыт — {service}")
+        print(f"│  ● {port}/tcp   {service:<25} │")
 
 # завершение таймера и расчет времени сканирования
 end_time = time.time()
 scan_time = end_time - start_time
 
 # результаты сканирования
-print("Сканирование завершено.")
-print(f"Количество открытых портов: {open_ports}")
-print(f"Открытые порты: {open_ports_list}")
-print(f"Время сканирования: {scan_time:.2f} секунд")
+print("├────────────────────────────────────────┤")
+print("│ SUMMARY                                │")
+print(f"│  Open ports       {open_ports:<20} │")
+print(f"│  Scan duration    {scan_time:.2f}s{' ':15} │")
+print("╰────────────────────────────────────────╯")
